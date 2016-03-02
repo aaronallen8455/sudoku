@@ -1,7 +1,7 @@
 window.onload = function() {
     //Number system to use. Must a square number.
-    const base = 16;
-    var charArray = [0,1,2,3,4,5,6,7,8,9,'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'].slice(0, base);
+    const base = 9;
+    var charArray = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'].slice(0, base);
 
     //define cell class
     function Cell(row, column, box, grid) {
@@ -247,24 +247,185 @@ window.onload = function() {
         if (cells.length === 0) { //got as far as we can with scanning, try advanced logic.
             //check for X wing conditions
             //only two possible cells for a value in each of two different rows
-            //and these candidates lie also in the same columsn
+            //and these candidates lie also in the same column
             //then all other candidates for this value in the columns can be eliminated.
             //same if switching rows for columns.
-            /*for (var i=0; i<this.rows.length; i++) {
-                var missing = this.box.cells.reduce(function(a,b){
-                    var index = a.indexOf(b.value);
+            for (var i=0; i<this.rows.length; i++) {
+                var row = this.rows[i];
+                //start by getting the values not present in group
+                var missing = row.cells.reduce(function(a,b){
+                    var index = a.indexOf(b.element.innerHTML);
                     if (index !== -1)
                         a.splice(index, 1);
                     return a;
                 }, charArray.slice(0));
-            }*/
+                for (var p=0; p<missing.length; p++) {
+                    //check if there are only two cells that can have this value in the row
+                    var pair1 = row.cells.filter(function(x){
+                        return (x.possibleValues.indexOf(missing[p]) !== -1);
+                    });
+                    if (pair1.length === 2) {
+                        //try to find second pair where cells are in the same columns as pair 1
+                        for (var r=0; r<this.rows.length; r++) {
+                            if (r === i) continue;
+                            var c1 = this.rows[r].cells[pair1[0].coords.x];
+                            var c2 = this.rows[r].cells[pair1[1].coords.x];
+                            if (c1.possibleValues.length > 1 && c1.possibleValues.indexOf(missing[p]) !== -1) {
+                                if (c2.possibleValues.length > 1 && c2.possibleValues.indexOf(missing[p]) !== -1) {
+                                    if (this.rows[r].cells.filter(function(x){ return (x.possibleValues.indexOf(missing[p]) !== -1);}).length === 2) {
+                                        //remove this value from all cells in these 2 columns not in the pairs
+                                        for (var o=0; o<c1.column.cells.length; o++) {
+                                            if (o === i || o === r) continue
+                                            var index = c1.column.cells[o].possibleValues.indexOf(missing[p]);
+                                            if (index !== -1)
+                                                c1.column.cells[o].possibleValues.splice(index, 1);
+                                        }
+                                        for (var o=0; o<c2.column.cells.length; o++) {
+                                            if (o === i || o === r) continue
+                                            var index = c2.column.cells[o].possibleValues.indexOf(missing[p]);
+                                            if (index !== -1)
+                                                c2.column.cells[o].possibleValues.splice(index, 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //now check the columns for x-wing
+            for (var i=0; i<this.columns.length; i++) {
+                var column = this.columns[i];
+                //start by getting the values not present in group
+                var missing = column.cells.reduce(function(a,b){
+                    var index = a.indexOf(b.element.innerHTML);
+                    if (index !== -1)
+                        a.splice(index, 1);
+                    return a;
+                }, charArray.slice(0));
+                for (var p=0; p<missing.length; p++) {
+                    //check if there are only two cells that can have this value in the column
+                    var pair1 = column.cells.filter(function(x){
+                        return (x.possibleValues.length > 1 && x.possibleValues.indexOf(missing[p]) !== -1);
+                    });
+                    if (pair1.length === 2) {
+                        //try to find second pair where cells are in the same columns as pair 1
+                        for (var r=0; r<this.columns.length; r++) {
+                            if (r === i) continue;
+                            var c1 = this.columns[r].cells[pair1[0].coords.y];
+                            var c2 = this.columns[r].cells[pair1[1].coords.y];
+                            if (c1.possibleValues.length > 1 && c1.possibleValues.indexOf(missing[p]) !== -1) {
+                                if (c2.possibleValues.length > 1 && c2.possibleValues.indexOf(missing[p]) !== -1) {
+                                    if (this.columns[r].cells.filter(function(x){ return (x.possibleValues.indexOf(missing[p]) !== -1);}).length === 2) {
+                                        //remove this value from all cells in these 2 rows not in the pairs
+                                        for (var o=0; o<c1.row.cells.length; o++) {
+                                            if (o === i || o === r) continue
+                                            var index = c1.row.cells[o].possibleValues.indexOf(missing[p]);
+                                            if (index !== -1)
+                                                c1.row.cells[o].possibleValues.splice(index, 1);
+                                        }
+                                        for (var o=0; o<c2.row.cells.length; o++) {
+                                            if (o === i || o === r) continue
+                                            var index = c2.row.cells[o].possibleValues.indexOf(missing[p]);
+                                            if (index !== -1)
+                                                c2.row.cells[o].possibleValues.splice(index, 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             
-            //check for hidden pairs in rows and columns
-        
+            //hidden candidates
+            //if two cells in a row/column share 2 possible values
+            //and no other cell in the group can have these values
+            //remove any other possible values from these 2 cells
+            for (var i=0; i<this.rows.length; i++) {
+                for (var p=0; p<charArray.length; p++) {
+                    var pair = this.rows[i].cells.filter(function(x) {return (x.possibleValues.indexOf(charArray[p]) !== -1);});
+                    if (pair.length === 2) {
+                        //check for second value
+                        for (var n=0; n<charArray.length; n++) {
+                            if (n === p) continue;
+                            if (pair[0].possibleValues.indexOf(charArray[n]) !== -1 && pair[1].possibleValues.indexOf(charArray[n]) !== -1) {
+                                if (this.rows[i].cells.filter(function(x) {return (x.possibleValues.indexOf(charArray[n]) !== -1);}).length === 2) {
+                                    //we found a pair.
+                                    var otherValues1 = pair[0].possibleValues.filter(function(x){return (x !== charArray[n] && x !== charArray[p]);});
+                                    var otherValues2 = pair[1].possibleValues.filter(function(x){return (x !== charArray[n] && x !== charArray[p]);});
+                                    pair[0].possibleValues = [charArray[p], charArray[n]];
+                                    pair[1].possibleValues = [charArray[p], charArray[n]];
+                                    for (var s=0; s<otherValues1.length; s++) {
+                                        var left = this.rows[i].cells.filter(function(x) {return (x.element.innerHTML === otherValues1[s]);});
+                                        if (left.length === 1) {
+                                            left[0].element.innerHTML = '';
+                                        }
+                                    }
+                                    for (var s=0; s<otherValues2.length; s++) {
+                                        var left = this.rows[i].cells.filter(function(x) {return (x.element.innerHTML === otherValues2[s]);});
+                                        if (left.length === 1) {
+                                            left[0].element.innerHTML = '';
+                                        }
+                                    }
+                                    //recurse
+                                    //this.hideValue.call(this);
+                                    console.log('hidden row');
+                                    //return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //repeat for columns
+            for (var i=0; i<this.columns.length; i++) {
+                for (var p=0; p<charArray.length; p++) {
+                    var pair = this.columns[i].cells.filter(function(x) {return (x.possibleValues.indexOf(charArray[p]) !== -1);});
+                    if (pair.length === 2) {
+                        //check for second value
+                        for (var n=0; n<charArray.length; n++) {
+                            if (n === p) continue;
+                            if (pair[0].possibleValues.indexOf(charArray[n]) !== -1 && pair[1].possibleValues.indexOf(charArray[n]) !== -1) {
+                                if (this.columns[i].cells.filter(function(x) {return (x.possibleValues.indexOf(charArray[n]) !== -1);}).length === 2) {
+                                    //we found a pair.
+                                    var otherValues1 = pair[0].possibleValues.filter(function(x){return (x !== charArray[n] && x !== charArray[p]);});
+                                    var otherValues2 = pair[1].possibleValues.filter(function(x){return (x !== charArray[n] && x !== charArray[p]);});
+                                    pair[0].possibleValues = [charArray[p], charArray[n]];
+                                    pair[1].possibleValues = [charArray[p], charArray[n]];
+                                    for (var s=0; s<otherValues1.length; s++) {
+                                        var left = this.columns[i].cells.filter(function(x) {return (x.element.innerHTML === otherValues1[s]);});
+                                        if (left.length === 1) {
+                                            left[0].element.innerHTML = '';
+                                        }
+                                    }
+                                    for (var s=0; s<otherValues2.length; s++) {
+                                        var left = this.columns[i].cells.filter(function(x) {return (x.element.innerHTML === otherValues2[s]);});
+                                        if (left.length === 1) {
+                                            left[0].element.innerHTML = '';
+                                        }
+                                    }
+                                    //recurse
+                                    //this.hideValue.call(this);
+                                    console.log('hidden column');
+                                    //return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             //check for naked pairs in rows and columns
 
             //check for naked pairs in box
-            return;
+            if (this.cells.filter(function(x){return (x.possibleValues.length === 1 && x.element.innerHTML !== '');}).length === 0)
+                return;
+            else {
+                console.log('re');
+                this.hideValue.call(this);
+                return;
+            }
         }
         //pick a random cell
         var rand = Math.floor(Math.random() * cells.length);
@@ -343,7 +504,7 @@ window.onload = function() {
             grid.cells[i].possibleValues = [grid.cells[i].value];
         }
         grid.hideValue();
+        console.log(grid.cells.filter(function(x){return x.element.innerHTML === '';}).length);
         tableOut(grid);
     }
-
 }
